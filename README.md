@@ -48,7 +48,8 @@ aws iam attach-role-policy \
     --policy-arn arn:aws:iam::aws:policy/AmazonS3TablesFullAccess
 aws iam attach-role-policy \
     --role-name EMR_DefaultRole_V2 \
-    --policy-arn arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+    --policy-arn arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole
+
 aws iam create-instance-profile --instance-profile-name EMR_EC2_DefaultRole
 aws iam add-role-to-instance-profile \
     --instance-profile-name EMR_EC2_DefaultRole \
