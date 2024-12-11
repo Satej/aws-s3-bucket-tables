@@ -85,7 +85,17 @@ Output
 aws emr list-clusters
 j-1L5SBP5H1NGQ0
 
-Wait for cluster to be in RUNNING State
+Wait for cluster to be in WAITING State
+aws emr describe-cluster --region us-east-1 --cluster-id j-1L5SBP5H1NGQ0  --query "Cluster.Ec2InstanceAttributes" --output text
+
+aws ec2 authorize-security-group-ingress \
+    --region us-east-1 \
+    --group-id sg-03049bb3db6e39d0b \
+    --protocol tcp \
+    --port 22 \
+    --cidr 0.0.0.0/0
+
+aws emr describe-cluster --region us-east-1 --cluster-id j-1L5SBP5H1NGQ0 --query "Cluster.MasterPublicDnsName" --output text
 
 ssh -i MyEMRKey.pem hadoop@<MasterPublicDnsName>
 
@@ -95,5 +105,37 @@ spark-shell \
 --conf spark.sql.catalog.s3tablesbucket=org.apache.iceberg.spark.SparkCatalog \
 --conf spark.sql.catalog.s3tablesbucket.catalog-impl=software.amazon.s3tables.iceberg.S3TablesCatalog \
 --conf spark.sql.catalog.s3tablesbucket.warehouse=arn:aws:s3tables:us-east-1:851725604111:bucket/a-unique-bucket-name \
---conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions            
+--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+
+scala> spark.sql("CREATE NAMESPACE IF NOT EXISTS s3tablesbucket.example_namespace")           
+res0: org.apache.spark.sql.DataFrame = []
+
+scala> spark.sql( 
+     | """ CREATE TABLE IF NOT EXISTS s3tablesbucket.example_namespace.`example_table` ( 
+     |     id INT, 
+     |     name STRING, 
+     |     value INT 
+     | ) 
+     | USING iceberg """
+     | )
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+res1: org.apache.spark.sql.DataFrame = []
+
+spark.sql(
+"""
+    INSERT INTO s3tablesbucket.example_namespace.example_table 
+    VALUES 
+        (1, 'ABC', 100), 
+        (2, 'XYZ', 200)
+""")
+
+scala> spark.sql(""" SELECT *
+     | FROM s3tablesbucket.example_namespace.`example_table` """).show()
++---+----+-----+                                                                
+| id|name|value|
++---+----+-----+
+|  1| ABC|  100|
+|  2| XYZ|  200|
 ```
